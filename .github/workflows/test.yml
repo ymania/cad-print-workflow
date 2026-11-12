@@ -12,3 +12,4 @@ jobs:
       - run: python -m pip install -e '.[dev]'
       - run: pytest -q
       - run: python examples/create_demo.py && cad-print export demo.dxf -o result/demo.pdf --preview
+      - run: cad-model build examples/reviewed_geometry.json -o result/pipeline --preview
