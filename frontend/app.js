@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id),core=CADCore,vision=CADVision;
 const defaultPreset=vision.presets[0];
 let config={...defaultPreset,key:''},selectedPreset=defaultPreset.id,images=[],current=null,busy=false,aborter=null,toastTimer,previewURL=null,downloads=[];
-function notice(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,9000)}
+function notice(text){if($('settings').open)$('config-feedback').textContent=text;$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,9000)}
 function message(text,role='assistant'){const el=document.createElement('div');el.className='message '+role;el.textContent=text;$('messages').append(el);$('messages').scrollTop=$('messages').scrollHeight}
 function trace(items){$('trace').replaceChildren();for(const text of items){const el=document.createElement('div');el.textContent=text;$('trace').append(el)}}
 function setBusy(value){busy=value;for(const id of ['send','demo','image','folder','import','apply','settings-open','clear'])$(id).disabled=value;$('spec').disabled=value;$('confirmed').disabled=value;$('cancel').disabled=!value||!aborter;for(const button of $('image-list').querySelectorAll('button'))button.disabled=value||button.dataset.locked==='true';$('build').disabled=value||!current||!$('confirmed').checked;$('save-draft').disabled=value||!current;$('state').textContent=value?'正在调用模型':'就绪'}
@@ -15,7 +15,7 @@ function draft(){const s=JSON.parse($('spec').value);s.reviewed=false;return cor
 function resetDrawing(){current=null;images=[];renderImages();$('image').value='';$('folder').value='';$('import').value='';$('spec').value='';$('count').textContent='等待识图';$('issues').textContent='';$('components').textContent='等待图片或参数文件';$('confirmed').checked=false;$('consent').checked=false;clearFiles();clearPreview();trace([]);setBusy(false);status()}
 function status(){$('model-status').textContent=config.key?(vision.presets.find(p=>p.id===config.id)?.name||'自定义')+' 已配置':'模型待配置';$('destination').textContent=config.key?'图片接收地址：'+vision.endpoint(config.base)+` · 本次 ${images.length} 张图片`:'尚未配置模型密钥（默认 DeepSeek）'}
 function selectProvider(id){
- const preset=vision.presets.find(p=>p.id===id);selectedPreset=id;
+ const preset=vision.presets.find(p=>p.id===id);selectedPreset=id;$('config-feedback').textContent='';
  for(const button of $('provider-cards').children)button.setAttribute('aria-pressed',String(button.dataset.provider===id));
  $('base-url').value=preset.base;$('model').value=preset.model;$('key').value='';
  $('advanced-config').open=id==='custom';
