@@ -1,10 +1,22 @@
-# CAD Print Workflow
+# CAD Print Workflow · 浏览器 CAD 助手
 
 把这次 LibreCAD 工程制图与缺线排查经验整理为可重复使用的工作流。提供 **DXF 检查 → 黑白矢量 PDF → 页面校验 → PNG 预览**，以及指导 Agent 建图、标注和验收的中文文档。
 
 现在提供图片识别接口和本机网页助手，识图结果必须经核对后再建图。这不是完整 CAD 内核。主要服务于二维、毫米单位的模型空间工程线稿。遇到不支持的对象会报错，避免无声漏画。
 
-## 网页助手与 FreeCAD
+## 推荐：无需后端的浏览器版
+
+`frontend/` 提供纯前端网页：用户自己的 API 识图 → 核对构件与尺寸 → 本地导出 LibreCAD DXF、A3 PDF、SVG、FreeCAD 宏。密钥只在当前页内存保存，不使用服务器中转或云存储。
+
+```bash
+python3 -m http.server 8766 --bind 127.0.0.1 --directory frontend
+```
+
+打开 http://127.0.0.1:8766 。线上只需静态托管，无需购买运行Python/FreeCAD的服务器。先点内置示例可免密钥测试导出。
+
+[浏览器版使用、隐私边界与域名部署说明](docs/browser-assistant.md)。只支持允许浏览器跨域请求的视觉模型接口；FreeCAD宏在用户本机运行；不自动输出原生尺寸标注或三维实体。
+
+## 可选：原本机 Python 助手与 FreeCAD
 
 ```bash
 python -m pip install -e '.[web]'
