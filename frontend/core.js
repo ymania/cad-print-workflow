@@ -7,6 +7,7 @@ const pt=p=>{if(!Array.isArray(p)||p.length!==2)throw Error('坐标必须是 [x,
 const f=x=>Number(x.toFixed(6)).toString();
 function validate(s,review=false){
  if(!s||s.version!==1||s.units!=='mm'||!Array.isArray(s.unresolved)||typeof s.reviewed!=='boolean')throw Error('需要 version:1、units:mm、reviewed 和 unresolved 列表');
+ if(s.notes!==undefined&&(!Array.isArray(s.notes)||s.notes.some(x=>typeof x!=='string')))throw Error('notes必须为中文说明字符串列表');
  if(review&&(!s.reviewed||s.unresolved.length))throw Error('请先解决待确认项并核对几何');
  if(!Array.isArray(s.components)||!s.components.length||s.components.length>200)throw Error('构件数量须在1到200之间');
  const ids=new Set();let count=0;

@@ -25,3 +25,5 @@ test('empty batches and too many images are refused before network',async()=>{
  for(const images of [[],Array(21).fill({data:'data:image/png;base64,eA=='})])await assert.rejects(vision.recognize({...base,images},async()=>{called=true}),/1到20/);
  assert.equal(called,false);
 });
+
+test('reference notes do not block export but unresolved geometry still does',()=>{const s=sample();s.notes=['图5为标题栏样式参考'];assert.doesNotThrow(()=>core.dxf(s));s.unresolved=['吊钩缺少圆心定位'];assert.throws(()=>core.dxf(s),/待确认/);s.unresolved=[];s.notes=[42];assert.throws(()=>core.validate(s),/notes/)});
