@@ -8,6 +8,8 @@
 
 `frontend/` 提供纯前端网页：用户自己的 API 识图 → 核对构件与尺寸 → 本地导出 LibreCAD DXF、A3 PDF、SVG、FreeCAD 宏。密钥只在当前页内存保存，不使用服务器中转或云存储。
 
+点击 DeepSeek、Gemini 或通义千问卡片，只填自己的 Key；支持多选图片、文件夹导入、追加、去重与排序，一次发送多张整图/细节图（最多20张、合计12MiB）。
+
 ```bash
 python3 -m http.server 8766 --bind 127.0.0.1 --directory frontend
 ```

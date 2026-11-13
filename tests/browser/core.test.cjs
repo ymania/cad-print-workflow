@@ -10,3 +10,18 @@ test('direct model requests are credential-scoped, omit browser cookies and bloc
 test('endpoint rejects insecure URLs, credentials and query secrets',()=>{for(const url of ['http://example.com','https://u:p@example.com','https://example.com?key=secret','https://example.com/v1/chat/completions'])assert.throws(()=>vision.endpoint(url));});
 test('network/CORS failures and malformed responses are actionable',async()=>{const config={base:'https://example.invalid/v1',model:'v',key:'k',image:'data:image/png;base64,eA==',instruction:'draw'};await assert.rejects(vision.recognize(config,async()=>{throw Error('private provider detail')}),/CORS/);await assert.rejects(vision.recognize(config,async()=>({ok:true,text:async()=>'{broken'})),/有效/)});
 test('unrecognized entity is never silently omitted',()=>{const s=sample();s.components[0].entities.push({type:'spline',role:'outline'});assert.throws(()=>core.svg(s),/仅支持/)});
+
+test('presets include working official vision model IDs and HTTPS endpoints',()=>{
+ const ds=vision.presets.find(p=>p.id==='deepseek');assert.equal(ds.model,'deepseek-flash');assert.equal(vision.endpoint(ds.base),'https://api.deepseek.com/chat/completions');
+ for(const p of vision.presets.filter(p=>p.id!=='custom'))assert.match(vision.endpoint(p.base),/^https:/);
+});
+test('all images are sent in order with numbered filenames and no local paths',async()=>{
+ let sent;const config={base:'https://api.deepseek.com',model:'deepseek-flash',key:'k',images:[{name:'whole.png',data:'data:image/png;base64,eA=='},{name:'detail.png',data:'data:image/png;base64,eQ=='}],instruction:'combine'};
+ await vision.recognize(config,async(url,options)=>{sent=JSON.parse(options.body);return{ok:true,text:async()=>JSON.stringify({choices:[{message:{content:JSON.stringify(sample())}}]})}});
+ const content=sent.messages[1].content;assert.equal(content.filter(x=>x.type==='image_url').length,2);assert.deepEqual(JSON.parse(content[3].text),{image_number:2,filename:'detail.png'});assert.equal(content[4].image_url.url,config.images[1].data);
+});
+test('empty batches and too many images are refused before network',async()=>{
+ let called=false;const base={base:'https://api.deepseek.com',model:'deepseek-flash',key:'k',instruction:'draw'};
+ for(const images of [[],Array(21).fill({data:'data:image/png;base64,eA=='})])await assert.rejects(vision.recognize({...base,images},async()=>{called=true}),/1到20/);
+ assert.equal(called,false);
+});
