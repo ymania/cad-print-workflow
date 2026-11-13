@@ -18,6 +18,12 @@ python3 -m http.server 8766 --bind 127.0.0.1 --directory frontend
 
 [浏览器版使用、隐私边界与域名部署说明](docs/browser-assistant.md)。只支持允许浏览器跨域请求的视觉模型接口；FreeCAD宏在用户本机运行；不自动输出原生尺寸标注或三维实体。
 
+## 新增：带本地几何工具的 Agent 工作台
+
+打开 `frontend/studio.html`（线上首页有入口），先校正与标定，再启动“图像预处理 → 模型方案 → 本地约束求解 → 有限修正 → 图上确认 → CAD导出”。支持中文问题卡片、多张参考图和用户确认尺寸锁定。
+
+[使用流程、工具与明确限制](docs/agent-runtime.md)。可使用无Key合成演示检查程序；真实识图依赖所选视觉服务，当前仍需手动确认纸角与尺度，不支持原生尺寸标注或任意复杂CAD图。
+
 ## 可选：原本机 Python 助手与 FreeCAD
 
 ```bash

@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '22'
       - run: node --test tests/browser/*.test.cjs
-      - run: node --check frontend/app.js
+      - run: for file in frontend/*.js; do node --check "$file"; done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
