@@ -1,0 +1,6 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const H=require('../../frontend/standard-hook.js'),G=require('../../frontend/agent-geometry.js');
+const dims={shaftDiameter:15,shoulderDiameter:20,shaftLength:20,shoulderHeight:60,offset:6,drop:10,r28:28,r40:40,r32:32,innerDiameter:27,tipRadius:3,lipRadius:15,returnRadius:27};
+test('analytic hook has complete closed contour and finite tangent contacts',()=>{const p=H.construct(dims),s=G.solve(p);assert.equal(p.entities.length,14);assert.equal(s.issues.length,0);assert.equal(s.iterations,0);assert.ok(s.checks.every(c=>c.contact&&c.error<1e-8));assert.equal(p.entities.find(e=>e.id==='inner').type,'arc');assert.equal(p.entities[3].end[0]-p.entities[3].start[0],15)});
+test('changed radius rebuilds tangencies instead of changing labels',()=>{const s=G.solve(H.construct({...dims,returnRadius:28}));assert.equal(s.issues.length,0);assert.equal(s.plan.entities.find(e=>e.id==='a27').radius,28)});
+test('impossible dimensions and missing input fail explicitly',()=>{assert.throws(()=>H.construct({...dims,drop:100}),/相切/);assert.throws(()=>H.construct({...dims,shaftDiameter:undefined}),/毫米/);assert.throws(()=>H.construct({...dims,shoulderHeight:20}),/高度/)});
