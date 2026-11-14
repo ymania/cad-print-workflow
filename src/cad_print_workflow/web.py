@@ -10,7 +10,7 @@ import threading
 import uuid
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .pipeline import extract, build, validate
@@ -254,8 +254,19 @@ def create_app(data_dir=None):
         if filename not in item['files']: raise HTTPException(404,'文件不存在')
         return FileResponse(root/ident/'output'/filename,filename=filename)
 
+    # Editable repository installs share the same browser workbench as Pages.
+    frontend = Path(os.getenv('CAD_FRONTEND_DIR', Path(__file__).resolve().parents[2]/'frontend'))
+    if (frontend/'studio.html').is_file():
+        app.mount('/studio', StaticFiles(directory=frontend), name='studio')
+
+    @app.get('/legacy')
+    def legacy(): return FileResponse(STATIC/'index.html')
+
     @app.get('/')
-    def index(): return FileResponse(STATIC/'index.html')
+    def index():
+        if (frontend/'studio.html').is_file():
+            return RedirectResponse('/studio/studio.html')
+        raise HTTPException(503, '请从项目源码安装运行，或设置CAD_FRONTEND_DIR指向frontend目录；旧助手保留在/legacy')
     app.mount('/static',StaticFiles(directory=STATIC),name='static')
     return app
 

@@ -66,3 +66,12 @@ def test_delivery_web_review_and_package(tmp_path):
     sheets[0]['geometry_reviewed']=False
     assert run('build')['status']=='error'
     assert source.read_bytes()==(tmp_path/'data'/upload['id']/'source.dxf').read_bytes()
+
+
+def test_home_routes_to_v2_workbench(tmp_path):
+    client=TestClient(create_app(tmp_path))
+    page=client.get('/')
+    assert page.url.path=='/studio/studio.html'
+    assert 'photo-folder' in page.text
+    assert client.get('/studio/studio-flow.js').status_code==200
+    assert client.get('/legacy').status_code==200
