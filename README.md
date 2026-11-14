@@ -90,3 +90,7 @@ convert('drawing.dxf', 'result/drawing.pdf', preview=True)
 ```
 
 验证并不等于工程签审。打印前仍需看预览、检查图形内容及尺寸含义。工程图放大3:1时，图上长165 mm应标实际55 mm；此规则由建图/标注阶段负责。
+
+### 整套作业的本地交付
+
+新增 `cad-job inventory/check/build/package`：按作业清单检查每个原生尺寸的比例与显示值，批量生成A3打印稿和预览，视觉审核后打包。支持同页水坝3:1、其他构件1:1。详见[使用说明与能力边界](docs/homework-delivery.md)。这是本地工具，尚未接入静态网页。
