@@ -94,3 +94,7 @@ convert('drawing.dxf', 'result/drawing.pdf', preview=True)
 ### 整套作业的本地交付
 
 新增 `cad-job inventory/check/build/package`：按作业清单检查每个原生尺寸的比例与显示值，批量生成A3打印稿和预览，视觉审核后打包。支持同页水坝3:1、其他构件1:1。详见[使用说明与能力边界](docs/homework-delivery.md)。这是本地工具，尚未接入静态网页。
+
+## 当前完整流程
+
+[功能流程图与实施状态](docs/system-flow.md) · [本地网页交付台使用说明](docs/homework-delivery.md#本地网页交付台)

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from .pipeline import extract, build, validate
+from .delivery import inventory, audit_job, build_job, package_job
 
 STATIC = Path(__file__).with_name('static')
 DEMO = {'version':1,'units':'mm','reviewed':False,'unresolved':[], 'components':[
@@ -146,6 +147,103 @@ def create_app(data_dir=None):
                 update(ident,status='error',message='生成失败：请检查几何是否在A3页面内、FreeCAD启动器是否有效。原始输入已保留。',trace=['生成或文件验证失败'])
         pool.submit(work)
         return get_job(ident)
+
+    @app.post('/api/delivery/upload')
+    async def delivery_upload(request: Request):
+        data = await body(request)
+        try:
+            raw = base64.b64decode(data.get('data', ''), validate=True)
+            if not raw or len(raw) > 20*1024*1024:
+                raise ValueError('请选择20MB以内的DXF')
+        except (ValueError, TypeError):
+            raise HTTPException(400, 'DXF为空、编码错误或超过20MB')
+        ident, folder = new_job()
+        (folder/'source.dxf').write_bytes(raw)
+        try:
+            listing = inventory(folder/'source.dxf')
+        except Exception:
+            update(ident, status='error')
+            raise HTTPException(400, '不能读取此DXF，请先用CAD检查文件')
+        update(ident, status='uploaded', kind='delivery-source', inventory=listing)
+        return get_job(ident)
+
+    def delivery_manifest(data, folder):
+        sheets = data.get('sheets')
+        if not isinstance(sheets, list) or not 1 <= len(sheets) <= 20:
+            raise ValueError('请选择1～20张图纸')
+        result = []
+        for i, sheet in enumerate(sheets):
+            if not isinstance(sheet, dict):
+                raise ValueError('图纸信息无效')
+            source_id = sheet.get('upload')
+            if not isinstance(source_id, str):
+                raise ValueError('缺少已上传图纸编号')
+            source = get_job(source_id)
+            if source.get('kind') != 'delivery-source':
+                raise ValueError('此任务不是已上传的DXF')
+            name = f'sheet{i+1}'
+            shutil.copyfile(root/source_id/'source.dxf', folder/(name+'.dxf'))
+            result.append({'id':name, 'title':str(sheet.get('title',name))[:200],
+                           'source':name+'.dxf', 'geometry_reviewed':sheet.get('geometry_reviewed'),
+                           'dimensions':sheet.get('dimensions',[])})
+        path = folder/'job.json'
+        path.write_text(json.dumps({'version':1,'sheets':result}, ensure_ascii=False), encoding='utf8')
+        return path
+
+    @app.post('/api/delivery/run')
+    async def delivery_run(request: Request):
+        data = await body(request)
+        if data.get('action') not in ('check','build'):
+            raise HTTPException(400,'请选择检查或生成')
+        ident, folder = new_job()
+        try:
+            path = delivery_manifest(data, folder)
+        except (ValueError, TypeError, HTTPException) as exc:
+            update(ident, status='error')
+            raise HTTPException(400, getattr(exc,'detail',str(exc)))
+        update(ident, kind='delivery', trace=['已保存本次图纸与尺寸清单'])
+        def work():
+            try:
+                report = audit_job(path)
+                update(ident, audit=report)
+                if not report['passed']:
+                    update(ident,status='error',message='检查未通过，请按图纸下方的问题修正',trace=['尺寸与图幅检查未通过'])
+                    return
+                if data['action'] == 'check':
+                    update(ident,status='checked',message='自动检查通过；仍需核对图形和打印预览')
+                    return
+                update(ident,trace=['自动检查通过','正在生成逐页PDF与预览'])
+                build_job(path, folder/'output')
+                update(ident,status='visual_review',sheet_ids=[s['id'] for s in report['sheets']],
+                       files=sorted(p.name for p in (folder/'output').iterdir() if p.is_file()),
+                       message='请逐页查看PDF与预览，再确认打包',trace=['打印稿已生成','等待逐页视觉审核'])
+            except Exception:
+                update(ident,status='error',message='检查或生成失败：请核对尺寸清单、DXF、字体及Poppler安装情况',trace=['交付未完成，输入已保留'])
+        pool.submit(work)
+        return get_job(ident)
+
+    @app.post('/api/delivery/{ident}/package')
+    async def delivery_package(ident: str, request: Request):
+        data = await body(request)
+        # Serialize state transition: double clicks cannot create competing archives.
+        with lock:
+            item = jobs.get(ident)
+            if not item or item.get('kind') != 'delivery' or item['status'] != 'visual_review':
+                raise HTTPException(409,'任务尚未进入视觉审核，或已经打包')
+            reviewed = data.get('reviewed')
+            if not isinstance(reviewed,list) or sorted(reviewed) != sorted(item['sheet_ids']):
+                raise HTTPException(400,'请逐页确认全部打印稿')
+            item['status'] = 'packaging'
+        try:
+            package_job(root/ident/'output', confirm_visual=True)
+        except Exception:
+            update(ident,status='visual_review')
+            raise HTTPException(400,'文件在生成后被修改或打包失败，请重新生成并审核')
+        update(ident,status='done',files=item['files']+['delivery.zip'],message='整套作业已打包')
+        return get_job(ident)
+
+    @app.get('/delivery')
+    def delivery_page(): return FileResponse(STATIC/'delivery.html')
 
     @app.get('/api/jobs/{ident}')
     def job(ident:str): return get_job(ident)
